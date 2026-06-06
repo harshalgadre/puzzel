@@ -1,7 +1,7 @@
 {
   "group1": {
     "name": "group 1",
-    "image": "https://kommodo.ai/i/wnJJqKkZvA5DsGqKlfph",
+    "image": "https://res.cloudinary.com/dlfcq6svp/image/upload/f_auto,q_auto/b1_s0nntw",
     "clue": "go watch for clues",
     "rows": 7,
     "cols": 7,
@@ -9,7 +9,7 @@
   },
   "group2": {
     "name": "group 2",
-    "image": "https://kommodo.ai/i/4c8Ivnh4G04kbJHn6mke",
+    "image": "https://res.cloudinary.com/dlfcq6svp/image/upload/v1780749638/b2_op3bh7.jpg",
     "clue": "go watch for clues",
     "rows": 6,
     "cols": 8,
@@ -17,7 +17,7 @@
   },
   "group3": {
     "name": "group 3",
-    "image": "https://kommodo.ai/i/0Yp6bJk0Q4kfXxzsTCA9",
+    "image": "https://res.cloudinary.com/dlfcq6svp/image/upload/v1780749699/b3_syqqmq.jpg",
     "clue": "go watch for clues",
     "rows": 6,
     "cols": 8,
@@ -25,7 +25,7 @@
   },
   "group4": {
     "name": "group 4",
-    "image": "https://kommodo.ai/i/pJSZbolw9cipfAgu0tqZ",
+    "image": "https://res.cloudinary.com/dlfcq6svp/image/upload/v1780749730/b4_boersp.jpg",
     "clue": "go watch for clues",
     "rows": 6,
     "cols": 8,
