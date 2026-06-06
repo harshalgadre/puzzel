@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid puzzle group name" }, { status: 400 });
     }
 
+    const configPath = await resolveConfigPath();
     const fileContent = await fs.readFile(configPath, "utf-8");
     const config = JSON.parse(fileContent);
 
