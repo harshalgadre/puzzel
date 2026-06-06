@@ -8,20 +8,18 @@ const rootConfigPath = path.join(process.cwd(), "data", "config.json");
 const fallbackConfigPath = path.join(process.cwd(), "src", "data", "config.json");
 
 async function resolveConfigPath() {
-  try {
-    await fs.access(rootConfigPath);
-    return rootConfigPath;
-  } catch {
-    try {
-      await fs.access(path.dirname(rootConfigPath));
-    } catch {
-      await fs.mkdir(path.dirname(rootConfigPath), { recursive: true });
-    }
-    if (await fileExists(fallbackConfigPath)) {
-      return fallbackConfigPath;
-    }
+  if (await fileExists(rootConfigPath)) {
     return rootConfigPath;
   }
+
+  await fs.mkdir(path.dirname(rootConfigPath), { recursive: true });
+
+  if (await fileExists(fallbackConfigPath)) {
+    const fallbackContent = await fs.readFile(fallbackConfigPath, "utf-8");
+    await fs.writeFile(rootConfigPath, fallbackContent, "utf-8");
+  }
+
+  return rootConfigPath;
 }
 
 async function fileExists(filePath: string) {

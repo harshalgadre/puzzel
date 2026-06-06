@@ -152,18 +152,18 @@ export default function Home() {
         <div className="groups-grid">
           {groupsList.map((group) => {
             const isSolved = group.data.solved;
+            const groupNumber = group.key.replace("group", "Group ");
             return (
               <div
                 key={group.key}
                 onClick={() => setSelectedGroupKey(group.key)}
                 className="group-card"
               >
-                <div
-                  className="group-img-preview"
-                  style={{ backgroundImage: `url(${group.data.image})` }}
-                />
+                <div className="group-box-preview">
+                  <span>{groupNumber}</span>
+                </div>
                 <div className="group-card-header">
-                  <span className="group-name">{group.data.name}</span>
+                  <span className="group-name">{groupNumber}</span>
                   <span className={`group-status ${isSolved ? "status-solved" : "status-pending"}`}>
                     {isSolved ? "🏆 Solved" : "Pending"}
                   </span>
