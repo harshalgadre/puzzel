@@ -12,7 +12,24 @@ async function resolveConfigPath() {
     await fs.access(rootConfigPath);
     return rootConfigPath;
   } catch {
-    return fallbackConfigPath;
+    try {
+      await fs.access(path.dirname(rootConfigPath));
+    } catch {
+      await fs.mkdir(path.dirname(rootConfigPath), { recursive: true });
+    }
+    if (await fileExists(fallbackConfigPath)) {
+      return fallbackConfigPath;
+    }
+    return rootConfigPath;
+  }
+}
+
+async function fileExists(filePath: string) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
   }
 }
 

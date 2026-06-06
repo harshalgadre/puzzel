@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 
 interface PuzzleGroup {
@@ -47,48 +47,15 @@ function calculateGridSize(width: number, height: number): { rows: number; cols:
 
 export default function AdminPortal() {
   const [formData, setFormData] = useState<ConfigData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [authorized, setAuthorized] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
 
-  // Prompt for admin password on mount (client-side gate).
-  useEffect(() => {
-    // Only run in browser
-    if (typeof window === "undefined") return;
-    const expected = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
-    const pass = window.prompt("Enter admin password:");
-    if (expected && pass === expected) {
-      setAuthorized(true);
-    } else {
-      setAuthorized(false);
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch current settings only when authorized
-  useEffect(() => {
-    if (!authorized) return;
-    async function loadConfig() {
-      try {
-        const res = await fetch("/api/config");
-        if (res.ok) {
-          const data = await res.json();
-          setFormData(data);
-        }
-      } catch (err) {
-        console.error("Failed to load configuration", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadConfig();
-  }, [authorized]);
-
-  const handleChange = (
+  const handleChange = <K extends keyof PuzzleGroup>(
     groupKey: keyof ConfigData,
-    field: keyof PuzzleGroup,
-    value: any
+    field: K,
+    value: PuzzleGroup[K]
   ) => {
     if (!formData) return;
     setFormData({
@@ -106,6 +73,13 @@ export default function AdminPortal() {
   ) => {
     if (!formData || !file) return;
 
+    // Validate file size (max 500KB)
+    const maxSizeKB = 500;
+    if (file.size > maxSizeKB * 1024) {
+      showToast(`❌ Image too large! Max ${maxSizeKB}KB, got ${(file.size / 1024).toFixed(0)}KB`);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
@@ -117,7 +91,11 @@ export default function AdminPortal() {
             image: result,
           },
         });
+        showToast(`✓ Image loaded (${(file.size / 1024).toFixed(0)}KB)`);
       }
+    };
+    reader.onerror = () => {
+      showToast("❌ Failed to read image file");
     };
     reader.readAsDataURL(file);
   };
@@ -129,51 +107,112 @@ export default function AdminPortal() {
     }, 3000);
   };
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const expected = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
+    if (passwordInput === expected) {
+      setAuthorized(true);
+      // Load config after authentication
+      try {
+        const res = await fetch("/api/config");
+        if (res.ok) {
+          const data = await res.json();
+          setFormData(data);
+        }
+      } catch (err) {
+        console.error("Failed to load configuration", err);
+      }
+    } else {
+      showToast("❌ Incorrect password");
+      setPasswordInput("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData) return;
 
     setSaving(true);
     try {
+      const payload = JSON.stringify(formData);
+      const sizeKB = payload.length / 1024;
+      
+      if (sizeKB > 5000) {
+        showToast(`⚠️ Large payload (${sizeKB.toFixed(0)}KB). Images may be too big.`);
+      }
+
       const res = await fetch("/api/config", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: payload,
       });
 
       if (res.ok) {
+        const data = await res.json();
         showToast("✓ Configurations saved successfully!");
+        // Update local state with returned config to confirm save
+        setFormData(data.config);
       } else {
-        const errData = await res.json();
-        alert(`Error: ${errData.error || "Failed to save configurations"}`);
+        const errText = await res.text();
+        let errMsg = "Failed to save configurations";
+        try {
+          const errData = JSON.parse(errText);
+          errMsg = errData.error || errMsg;
+        } catch {
+          errMsg = errText || errMsg;
+        }
+        showToast(`❌ Error: ${errMsg}`);
       }
     } catch (err) {
       console.error("Failed to save configuration", err);
-      alert("Failed to submit configurations due to a network error.");
+      const errMsg = err instanceof Error ? err.message : "Network error";
+      showToast(`❌ Error: ${errMsg}`);
     } finally {
       setSaving(false);
     }
   };
 
-  if (authorized === null || loading) {
+  if (authorized !== true) {
     return (
-      <div className="admin-container" style={{ justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <h2 className="puzzle-title" style={{ animation: "pulse-glow 1.5s infinite alternate" }}>Loading Config Panel...</h2>
-      </div>
-    );
-  }
-
-  if (authorized === false) {
-    return (
-      <div className="admin-container" style={{ justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-        <h2 className="puzzle-title">Unauthorized</h2>
-        <p className="puzzle-subtitle">This administrative area is restricted. Contact the site owner.</p>
-        <Link href="/" className="btn-secondary" style={{ marginTop: "1rem" }}>
-          Return Home
-        </Link>
-      </div>
+      <>
+        <header className="navbar">
+          <Link href="/" className="nav-logo">
+            Puzzel Hub
+          </Link>
+        </header>
+        <div className="admin-container" style={{ justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+          <form onSubmit={handlePasswordSubmit} style={{ width: "100%", maxWidth: "400px", textAlign: "center" }}>
+            <h2 className="puzzle-title">Admin Access</h2>
+            <p className="puzzle-subtitle" style={{ marginBottom: "1.5rem" }}>Enter admin password to continue</p>
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="Admin Password"
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                marginBottom: "1rem",
+                borderRadius: "8px",
+                border: "2px solid var(--color-primary, #1a73e8)",
+                fontSize: "1rem",
+                boxSizing: "border-box"
+              }}
+              autoFocus
+            />
+            <button type="submit" className="btn-primary" style={{ width: "100%" }}>
+              Unlock Admin Panel
+            </button>
+          </form>
+          {toastMessage && (
+            <div className="toast-notification" style={{ marginTop: "1rem" }}>
+              {toastMessage}
+            </div>
+          )}
+        </div>
+      </>
     );
   }
 

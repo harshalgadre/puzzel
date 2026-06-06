@@ -86,7 +86,7 @@ export default function Home() {
       <div className="main-dashboard" style={{ justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
         <div className="title-group">
           <h2 className="puzzle-title">Connection Error</h2>
-          <p className="puzzle-subtitle">We couldn't retrieve the puzzle configurations. Please verify server status.</p>
+          <p className="puzzle-subtitle">We couldn&apos;t retrieve the puzzle configurations. Please verify server status.</p>
         </div>
       </div>
     );

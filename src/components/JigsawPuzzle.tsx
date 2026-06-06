@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 
 interface Piece {
   id: number; // Correct target slot index (0 to tileCount - 1)
@@ -31,7 +31,7 @@ export default function JigsawPuzzle({
   const [boardSlots, setBoardSlots] = useState<(Piece | null)[]>(
     Array(tileCount).fill(null)
   );
-  const [deck, setDeck] = useState<Piece[]>([]);
+  const [, setDeck] = useState<Piece[]>([]);
   const [isWon, setIsWon] = useState(false);
   const [draggedPiece, setDraggedPiece] = useState<{
     pieceId: number;
@@ -44,7 +44,9 @@ export default function JigsawPuzzle({
   // Initialize Audio Context lazily
   const playSound = (type: "click" | "snap" | "win") => {
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       
@@ -92,7 +94,7 @@ export default function JigsawPuzzle({
   };
 
   // Start new game
-  const startNewGame = () => {
+  const startNewGame = useCallback(() => {
     // Generate sequential pieces and randomly place them directly into board slots
     const pieces: Piece[] = Array.from({ length: tileCount }, (_, i) => ({
       id: i,
@@ -120,17 +122,18 @@ export default function JigsawPuzzle({
       const ctx = canvas.getContext("2d");
       ctx?.clearRect(0, 0, canvas.width, canvas.height);
     }
-  };
+  }, [tileCount]);
 
   // Trigger start when image/props/dimensions change
   useEffect(() => {
-    startNewGame();
+    const timeoutId = window.setTimeout(startNewGame, 0);
     return () => {
+      window.clearTimeout(timeoutId);
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [imageSrc, rows, cols]);
+  }, [startNewGame, imageSrc]);
 
   // Canvas confetti effect
   const runConfetti = () => {
@@ -221,7 +224,6 @@ export default function JigsawPuzzle({
         }
 
         const prevSlotIndex = source as number;
-        const sourcePiece = next[prevSlotIndex];
         const targetPiece = next[targetSlotIndex];
 
         // Place dragged piece into the target
@@ -243,29 +245,6 @@ export default function JigsawPuzzle({
     }
   };
 
-  const handleDropOnDeck = (e: React.DragEvent) => {
-    e.preventDefault();
-    try {
-      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-      const { pieceId, source } = data;
-
-      if (source !== "deck") {
-        playSound("snap");
-        const prevSlotIndex = source as number;
-
-        setBoardSlots((prev) => {
-          const next = [...prev];
-          next[prevSlotIndex] = null;
-          return next;
-        });
-
-        setDeck((prev) => [...prev, { id: pieceId, currentSlot: null }]);
-      }
-    } catch (err) {
-      console.error("Drop back to deck error", err);
-    }
-  };
-
   const checkWinCondition = (currentSlots: (Piece | null)[]) => {
     const totalPlaced = currentSlots.filter(Boolean).length;
     if (totalPlaced !== tileCount) return;
@@ -280,20 +259,6 @@ export default function JigsawPuzzle({
       runConfetti();
       onComplete();
     }
-  };
-
-  // Developer cheat: Instantly auto-solve the puzzle
-  const cheatSolve = () => {
-    const completedBoard = Array.from({ length: tileCount }, (_, i) => ({
-      id: i,
-      currentSlot: i,
-    }));
-    setDeck([]);
-    setBoardSlots(completedBoard);
-    setIsWon(true);
-    playSound("win");
-    runConfetti();
-    onComplete();
   };
 
   // Helper values for background position calculations
