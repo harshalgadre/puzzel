@@ -4,7 +4,17 @@ import path from "path";
 
 export const dynamic = "force-dynamic";
 
-const configPath = path.join(process.cwd(), "src", "data", "config.json");
+const rootConfigPath = path.join(process.cwd(), "data", "config.json");
+const fallbackConfigPath = path.join(process.cwd(), "src", "data", "config.json");
+
+async function resolveConfigPath() {
+  try {
+    await fs.access(rootConfigPath);
+    return rootConfigPath;
+  } catch {
+    return fallbackConfigPath;
+  }
+}
 
 export async function POST(request: Request) {
   try {

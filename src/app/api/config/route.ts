@@ -4,10 +4,38 @@ import path from "path";
 
 export const dynamic = "force-dynamic";
 
-const configPath = path.join(process.cwd(), "src", "data", "config.json");
+const rootConfigPath = path.join(process.cwd(), "data", "config.json");
+const fallbackConfigPath = path.join(process.cwd(), "src", "data", "config.json");
+
+async function resolveConfigPath() {
+  try {
+    await fs.access(rootConfigPath);
+    return rootConfigPath;
+  } catch {
+    try {
+      await fs.access(path.dirname(rootConfigPath));
+    } catch {
+      await fs.mkdir(path.dirname(rootConfigPath), { recursive: true });
+    }
+    if (await fileExists(fallbackConfigPath)) {
+      return fallbackConfigPath;
+    }
+    return rootConfigPath;
+  }
+}
+
+async function fileExists(filePath: string) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET() {
   try {
+    const configPath = await resolveConfigPath();
     const fileContent = await fs.readFile(configPath, "utf-8");
     const config = JSON.parse(fileContent);
     return NextResponse.json(config);
@@ -42,6 +70,7 @@ export async function POST(request: Request) {
       }
     }
 
+    const configPath = await resolveConfigPath();
     await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2), "utf-8");
     return NextResponse.json({ success: true, config: updatedConfig });
   } catch (error) {
