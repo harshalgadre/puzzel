@@ -93,17 +93,21 @@ export default function JigsawPuzzle({
 
   // Start new game
   const startNewGame = () => {
-    // Generate sequential pieces
+    // Generate sequential pieces and randomly place them directly into board slots
     const pieces: Piece[] = Array.from({ length: tileCount }, (_, i) => ({
       id: i,
-      currentSlot: null,
+      currentSlot: i,
     }));
 
-    // Shuffle
-    const shuffledDeck = [...pieces].sort(() => Math.random() - 0.5);
+    // Shuffle pieces and assign one to each board slot
+    const shuffled = [...pieces].sort(() => Math.random() - 0.5);
+    const initialBoard = Array.from({ length: tileCount }, (_, idx) => ({
+      id: shuffled[idx].id,
+      currentSlot: idx,
+    })) as (Piece | null)[];
 
-    setDeck(shuffledDeck);
-    setBoardSlots(Array(tileCount).fill(null));
+    setDeck([]);
+    setBoardSlots(initialBoard);
     setIsWon(false);
     
     // Stop confetti if running
@@ -200,32 +204,37 @@ export default function JigsawPuzzle({
 
   const handleDropOnSlot = (e: React.DragEvent, targetSlotIndex: number) => {
     e.preventDefault();
-    if (boardSlots[targetSlotIndex] !== null) return;
-
     try {
       const data = JSON.parse(e.dataTransfer.getData("text/plain"));
       const { pieceId, source } = data;
 
-      const movedPiece: Piece = { id: pieceId, currentSlot: targetSlotIndex };
-
       playSound("snap");
 
-      // Remove from old slot
-      if (source === "deck") {
-        setDeck((prev) => prev.filter((p) => p.id !== pieceId));
-      } else {
-        const prevSlotIndex = source as number;
-        setBoardSlots((prev) => {
-          const next = [...prev];
-          next[prevSlotIndex] = null;
-          return next;
-        });
-      }
-
-      // Drop on new slot
       setBoardSlots((prev) => {
         const next = [...prev];
-        next[targetSlotIndex] = movedPiece;
+
+        // If source was deck (shouldn't happen anymore), just place and clear nothing
+        if (source === "deck") {
+          next[targetSlotIndex] = { id: pieceId, currentSlot: targetSlotIndex };
+          checkWinCondition(next);
+          return next;
+        }
+
+        const prevSlotIndex = source as number;
+        const sourcePiece = next[prevSlotIndex];
+        const targetPiece = next[targetSlotIndex];
+
+        // Place dragged piece into the target
+        next[targetSlotIndex] = { id: pieceId, currentSlot: targetSlotIndex };
+
+        // If there was a piece in target, move it into the original source slot (swap)
+        if (targetPiece) {
+          next[prevSlotIndex] = { id: targetPiece.id, currentSlot: prevSlotIndex };
+        } else {
+          // Otherwise the source slot becomes empty
+          next[prevSlotIndex] = null;
+        }
+
         checkWinCondition(next);
         return next;
       });
@@ -308,9 +317,6 @@ export default function JigsawPuzzle({
           </p>
         </div>
         <div className="header-actions">
-          <button onClick={cheatSolve} className="btn-cheat" title="Developer Solve Cheat">
-            ⚡ Solve
-          </button>
           <button onClick={startNewGame} className="btn-secondary">
             Reset Grid
           </button>
@@ -376,45 +382,7 @@ export default function JigsawPuzzle({
           </div>
         </div>
 
-        {/* Deck Sidebar Section */}
-        <div className="deck-section">
-          <div className="section-label">
-            Tray Pieces ({deck.length} remaining)
-          </div>
-          <div
-            onDragOver={handleDragOver}
-            onDrop={handleDropOnDeck}
-            className="deck-tray custom-scrollbar"
-          >
-            {deck.map((piece) => {
-              return (
-                <div
-                  key={piece.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, piece.id, "deck")}
-                  onDragEnd={handleDragEnd}
-                  className="deck-piece-wrapper"
-                >
-                  <div
-                    className="puzzle-piece tray-piece"
-                    style={{
-                      backgroundImage: `url(${imageSrc})`,
-                      backgroundSize: `${cols * 100}% ${rows * 100}%`,
-                      backgroundPosition: `${(piece.id % cols) * (100 / xDenom)}% ${
-                        Math.floor(piece.id / cols) * (100 / yDenom)
-                      }%`,
-                    }}
-                  />
-                </div>
-              );
-            })}
-            {deck.length === 0 && !isWon && (
-              <div className="empty-deck-notice">
-                All pieces are on the board! Arrange them to complete.
-              </div>
-            )}
-          </div>
-        </div>
+        {/* deck/tray removed for production - pieces are placed on the board */}
       </div>
     </div>
   );

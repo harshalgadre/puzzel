@@ -103,9 +103,7 @@ export default function Home() {
             Puzzel Hub
           </Link>
           <div className="nav-links">
-            <Link href="/admin" className="btn-secondary">
-              Admin Panel
-            </Link>
+            {/* Admin panel link removed for production */}
           </div>
         </header>
         <main className="main-dashboard">
@@ -140,11 +138,7 @@ export default function Home() {
         <Link href="/" className="nav-logo">
           Puzzel Hub
         </Link>
-        <div className="nav-links">
-          <Link href="/admin" className="btn-primary">
-            Admin Panel
-          </Link>
-        </div>
+        <div className="nav-links" />
       </header>
 
       <main className="main-dashboard">

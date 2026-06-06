@@ -48,11 +48,27 @@ function calculateGridSize(width: number, height: number): { rows: number; cols:
 export default function AdminPortal() {
   const [formData, setFormData] = useState<ConfigData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Fetch current settings
+  // Prompt for admin password on mount (client-side gate).
   useEffect(() => {
+    // Only run in browser
+    if (typeof window === "undefined") return;
+    const expected = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
+    const pass = window.prompt("Enter admin password:");
+    if (expected && pass === expected) {
+      setAuthorized(true);
+    } else {
+      setAuthorized(false);
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch current settings only when authorized
+  useEffect(() => {
+    if (!authorized) return;
     async function loadConfig() {
       try {
         const res = await fetch("/api/config");
@@ -67,7 +83,7 @@ export default function AdminPortal() {
       }
     }
     loadConfig();
-  }, []);
+  }, [authorized]);
 
   const handleChange = (
     groupKey: keyof ConfigData,
@@ -141,10 +157,22 @@ export default function AdminPortal() {
     }
   };
 
-  if (loading) {
+  if (authorized === null || loading) {
     return (
       <div className="admin-container" style={{ justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
         <h2 className="puzzle-title" style={{ animation: "pulse-glow 1.5s infinite alternate" }}>Loading Config Panel...</h2>
+      </div>
+    );
+  }
+
+  if (authorized === false) {
+    return (
+      <div className="admin-container" style={{ justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+        <h2 className="puzzle-title">Unauthorized</h2>
+        <p className="puzzle-subtitle">This administrative area is restricted. Contact the site owner.</p>
+        <Link href="/" className="btn-secondary" style={{ marginTop: "1rem" }}>
+          Return Home
+        </Link>
       </div>
     );
   }
